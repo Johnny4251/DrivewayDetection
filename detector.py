@@ -34,9 +34,21 @@ def capture_stream(classes_to_detect, camera_index=0, flip=False, score_thresh=0
     camera_video = cv2.VideoCapture(camera_index)
     device, model, class_indices = setup_model(classes_to_detect)
 
+    
+
     while True:
+        person_count, car_count = 0, 0
         _, frame = camera_video.read()
         if flip: frame = cv2.flip(frame, 1)
+
+        driveway_xmin, driveway_xmax = 150,500
+        driveway_ymin, driveway_ymax = 100,500
+        driveway_roi = frame[driveway_ymin:driveway_ymax, driveway_xmin:driveway_xmax]
+    
+        court_xmin, court_xmax = 0, 145
+        court_ymin, court_ymax = 100, 400
+        court_roi = frame[court_ymin:court_ymax, court_xmin:court_xmax]
+
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -60,13 +72,23 @@ def capture_stream(classes_to_detect, camera_index=0, flip=False, score_thresh=0
 
                 for box, score in zip(filtered_boxes, filtered_scores):
                     if score >= score_thresh:
+
+                        if classes_to_detect[class_indices.index(class_index)] == 'person':
+                            person_count += 1
+                        elif classes_to_detect[class_indices.index(class_index)] == 'car':
+                            car_count += 1
+
                         xmin, ymin, xmax, ymax = map(int, box.tolist())
                         cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
-                        cv2.putText(frame, f"{classes_to_detect[class_indices.index(class_index)]} {score:.2f}", (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        #if classes_to_detect[class_indices.index(class_index)] == 'person':
-                            #print("Someone is lurking in the driveway!")
+                        cv2.putText(frame, f"{classes_to_detect[class_indices.index(class_index)]} {score:.2f}"
+                                    , (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        
+        cv2.putText(frame, f"Persons: {person_count}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        cv2.putText(frame, f"Cars: {car_count}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
-        cv2.imshow('Object Detection', frame)
+        cv2.imshow('Camera View', frame)
+        cv2.imshow('Driveway', driveway_roi)
+        cv2.imshow('Court', court_roi)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break    
@@ -75,4 +97,4 @@ def capture_stream(classes_to_detect, camera_index=0, flip=False, score_thresh=0
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    capture_stream(['person', 'cell phone', 'dog'], score_thresh=0.61)
+    capture_stream(['person', 'car'], score_thresh=0.61)
