@@ -35,24 +35,22 @@ def is_in_roi(box, roi):
     roi_xmin, roi_ymin, roi_xmax, roi_ymax = roi
     return xmin >= roi_xmin and xmax <= roi_xmax and ymin >= roi_ymin and ymax <= roi_ymax
 
-def capture_stream(classes_to_detect, camera_index=0, flip=False, score_thresh=0.40, iou_thresh=0.3):
+def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False, score_thresh=0.40, iou_thresh=0.3):
     camera_video = cv2.VideoCapture(camera_index)
     device, model, class_indices = setup_model(classes_to_detect)
-
-    person_in_driveway = False
-    person_in_court = False
-
-    car_in_driveway = False
 
     while True:
         person_count, car_count = 0, 0
         _, frame = camera_video.read()
         if flip: frame = cv2.flip(frame, 1)
+        cv2.imshow('Camera View', frame)
 
-        driveway_xmin, driveway_xmax = 150,500
-        driveway_ymin, driveway_ymax = 100,500
-        driveway_roi = frame[driveway_ymin:driveway_ymax, driveway_xmin:driveway_xmax]
-    
+        if use_roi:
+            driveway_xmin, driveway_xmax = 150,500
+            driveway_ymin, driveway_ymax = 100,500
+            driveway_roi = frame[driveway_ymin:driveway_ymax, driveway_xmin:driveway_xmax]
+            frame = driveway_roi
+
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         tensor_image = F.to_tensor(frame_rgb)
@@ -87,12 +85,10 @@ def capture_stream(classes_to_detect, camera_index=0, flip=False, score_thresh=0
                         cv2.putText(frame, f"{classes_to_detect[class_indices.index(class_index)]} {score:.2f}"
                                     , (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                         
-                        
 
-        #cv2.putText(frame, f"Persons: {person_count}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-        #cv2.putText(frame, f"Cars: {car_count}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-
-        cv2.imshow('Camera View', frame)
+        cv2.putText(frame, f"Persons: {person_count}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        cv2.putText(frame, f"Cars: {car_count}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        
         cv2.imshow('Driveway', driveway_roi)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
