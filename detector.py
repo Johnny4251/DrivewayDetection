@@ -30,7 +30,7 @@ def setup_model(classes_to_detect):
 
     return device, model, class_indices
 
-def main(classes_to_detect, camera_index=0, flip=False, score_thresh=0.40, iou_thresh=0.3):
+def capture_stream(classes_to_detect, camera_index=0, flip=False, score_thresh=0.40, iou_thresh=0.3):
     camera_video = cv2.VideoCapture(camera_index)
     device, model, class_indices = setup_model(classes_to_detect)
 
@@ -63,6 +63,9 @@ def main(classes_to_detect, camera_index=0, flip=False, score_thresh=0.40, iou_t
                         xmin, ymin, xmax, ymax = map(int, box.tolist())
                         cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
                         cv2.putText(frame, f"{classes_to_detect[class_indices.index(class_index)]} {score:.2f}", (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        #if classes_to_detect[class_indices.index(class_index)] == 'person':
+                            #print("Someone is lurking in the driveway!")
+
         cv2.imshow('Object Detection', frame)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -72,4 +75,4 @@ def main(classes_to_detect, camera_index=0, flip=False, score_thresh=0.40, iou_t
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main(['person', 'car'])
+    capture_stream(['person', 'cell phone', 'dog'], score_thresh=0.61)
