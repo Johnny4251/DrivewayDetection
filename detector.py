@@ -44,7 +44,7 @@ def get_time():
 def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False, score_thresh=0.40, iou_thresh=0.3):
     camera_video = cv2.VideoCapture(camera_index)
     device, model, class_indices = setup_model(classes_to_detect)
-
+    prev_car_count = 0
     while True:
         person_count, car_count = 0, 0
         _, frame = camera_video.read()
@@ -52,7 +52,7 @@ def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False
         cv2.imshow('Camera View', frame)
 
         if use_roi:
-            driveway_xmin, driveway_xmax = 150,500
+            driveway_xmin, driveway_xmax = 200,550
             driveway_ymin, driveway_ymax = 100,500
             driveway_roi = frame[driveway_ymin:driveway_ymax, driveway_xmin:driveway_xmax]
             frame = driveway_roi
@@ -61,10 +61,9 @@ def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False
 
         tensor_image = F.to_tensor(frame_rgb)
         tensor_image = tensor_image.to(device)
-
+        
         with torch.no_grad():
             predictions = model([tensor_image])
-
         for class_index in class_indices:
             class_boxes = [predictions[0]['boxes'][i] for i, label in enumerate(predictions[0]['labels']) if label.item() == class_index]
 
@@ -76,7 +75,6 @@ def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False
 
                 filtered_boxes = boxes[keep]
                 filtered_scores = scores[keep]
-
                 for box, score in zip(filtered_boxes, filtered_scores):
                     if score >= score_thresh:
                         
@@ -101,10 +99,18 @@ def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False
                                 print("ERROR TO CAPTURE PHOTO: " + get_time())
                         elif classes_to_detect[class_indices.index(class_index)] == 'car':
                             car_count += 1
-                        
+                            
+
         cv2.putText(frame, f"Persons: {person_count}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         cv2.putText(frame, f"Cars: {car_count}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
+        
+        if prev_car_count > car_count:
+            print("A car has left the driveway")
+        elif prev_car_count < car_count:
+            print("A car has pulled into the driveway")
+            
+        prev_car_count = car_count   
         cv2.imshow('Driveway', driveway_roi)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
