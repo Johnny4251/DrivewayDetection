@@ -3,6 +3,7 @@ import torch
 import torchvision
 from torchvision.transforms import functional as F
 from torchvision.ops import nms
+from datetime import datetime
 
 COCO_INSTANCE_CATEGORY_NAMES = [
     '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
@@ -34,6 +35,11 @@ def is_in_roi(box, roi):
     xmin, ymin, xmax, ymax = box
     roi_xmin, roi_ymin, roi_xmax, roi_ymax = roi
     return xmin >= roi_xmin and xmax <= roi_xmax and ymin >= roi_ymin and ymax <= roi_ymax
+
+def get_time():
+    current_datetime = datetime.now()
+    formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+    return formatted_datetime
 
 def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False, score_thresh=0.40, iou_thresh=0.3):
     camera_video = cv2.VideoCapture(camera_index)
@@ -73,22 +79,32 @@ def capture_stream(classes_to_detect, camera_index=0, use_roi = True, flip=False
 
                 for box, score in zip(filtered_boxes, filtered_scores):
                     if score >= score_thresh:
-                        prev_car_count = car_count
-                        if classes_to_detect[class_indices.index(class_index)] == 'person':
-                            person_count += 1
-                        elif classes_to_detect[class_indices.index(class_index)] == 'car':
-                            car_count += 1
-
+                        
 
                         xmin, ymin, xmax, ymax = map(int, box.tolist())
                         cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
                         cv2.putText(frame, f"{classes_to_detect[class_indices.index(class_index)]} {score:.2f}"
                                     , (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                         
+                        if classes_to_detect[class_indices.index(class_index)] == 'person':
+                            person_count += 1
 
+                            scale_factor = 30
+                            try:
+                                zoom_frame = frame[ymin-scale_factor:ymax+scale_factor, xmin-scale_factor:xmax+scale_factor]
+                                zoom_frame = cv2.resize(zoom_frame, (480, 640), interpolation=cv2.INTER_LINEAR)
+
+                                cv2.imwrite("person/zoom/"+get_time()+".png", zoom_frame)
+                                cv2.imwrite("person/full_photo/"+get_time()+".png", frame)
+                                print("Photo taken")
+                            except:
+                                print("ERROR TO CAPTURE PHOTO: " + get_time())
+                        elif classes_to_detect[class_indices.index(class_index)] == 'car':
+                            car_count += 1
+                        
         cv2.putText(frame, f"Persons: {person_count}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         cv2.putText(frame, f"Cars: {car_count}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-        
+
         cv2.imshow('Driveway', driveway_roi)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
