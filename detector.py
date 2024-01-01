@@ -31,11 +31,6 @@ def setup_model(classes_to_detect):
 
     return device, model, class_indices
 
-def is_in_roi(box, roi):
-    xmin, ymin, xmax, ymax = box
-    roi_xmin, roi_ymin, roi_xmax, roi_ymax = roi
-    return xmin >= roi_xmin and xmax <= roi_xmax and ymin >= roi_ymin and ymax <= roi_ymax
-
 def get_time():
     current_datetime = datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
